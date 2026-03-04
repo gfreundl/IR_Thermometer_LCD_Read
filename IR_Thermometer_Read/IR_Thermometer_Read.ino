@@ -1,20 +1,32 @@
 
+// reads LCD matrix line for Cchina IR Thermometer
+// LCD has 4 COMmon and 11 SEGment lines, so we collect data in 4 passes
+// frequency 450Hz, voltage levels 0V, 1V, 2V, 3V 
+// only digits are read, additional symbols ignored
+
+// functional description:
+// comparator on COM line detects first COM pulse and starts scanning run
+// LCD frequency = 453Hz (2.2ms) 
+// only relevant SEG lines are connected to A/D converter, decimal point and symbols are omitted
+// matrix pulses are converted to digits binary representation
+// digits converted to numbers
 
 // defines for setting and clearing register bits
-#ifndef cbi
-#define cbi(sfr, bit) (_SFR_BYTE(sfr) &= ~_BV(bit))
+// sbi() and cbi() originally are Arduibno inline assembler
+#ifndef cbi                                   //set bit
+#define cbi(sfr, bit) (_SFR_BYTE(sfr) &= ~_BV(bit))   //_BV is just an alternative for (1<<bit)
 #endif
-#ifndef sbi
+#ifndef sbi                                   //clear bit
 #define sbi(sfr, bit) (_SFR_BYTE(sfr) |= _BV(bit))
 #endif
 
 int timer1_counter;
-volatile byte _comState;
-volatile byte _displayScan[4];
+volatile byte _comState;                      //counter for current COM line (1...4)
+volatile byte _displayScan[4];                //contains scanned pulse results for each pass
 volatile byte _scanComplete = 0;
 volatile byte _triggeredCounter = 0;
 
-byte digitA, digitB, digitC, digitD;
+byte digitA, digitB, digitC, digitD;          //intermediate result bytes
 
 void setup() {
   noInterrupts();  
@@ -37,15 +49,16 @@ void setup() {
   // Timer setup
   TCCR1A = 0;
   TCCR1B = 0;
-  timer1_counter = 61453;
+  timer1_counter = 61453;   // 489Hz @16MHz => 200us ahead of expected next start
   TCCR1B |= (1 << CS11);    // 8 prescaler 
   
   interrupts(); 
 }
 
+// convert observed bit sequence to number
 int convertDigit(byte digit)
 {
-  if(digit == 0x80) return -1;
+if(digit == 0x80) return -1;        //minus sign
   if(digit == 0x7E) return 0;
   if(digit == 0x18) return 1;
   if(digit == 0xB6) return 2;
@@ -73,7 +86,7 @@ int generateOutput()
   output += converted * 10;
   
   converted = convertDigit(digitB);
-  if(converted == -1){
+  if(converted == -1){                    //minus sign
     return output * -1;
   }else if(converted == -1000){
     return output; 
@@ -84,7 +97,7 @@ int generateOutput()
   }
 
   converted = convertDigit(digitA);
-  if(converted == -1){
+  if(converted == -1){                    //minus sign
     return output * -1;
   }else if(converted == -1000){
     return output; 
@@ -97,10 +110,12 @@ int generateOutput()
   return output;
 }
 
+// see COM/SEG matrix with B0...B7 lines for reference
 void sortDigits()
 {
   digitA = digitB = digitC = digitD = 0;
-  if(_displayScan[0] & (1<<0)) digitD |= (1<<5);
+  // in COM1 only 4 relevant SEGs
+  if(_displayScan[0] & (1<<0)) digitD |= (1<<5);       
   if(_displayScan[0] & (1<<2)) digitC |= (1<<5);
   if(_displayScan[0] & (1<<4)) digitB |= (1<<5);
   if(_displayScan[0] & (1<<6)) digitA |= (1<<5);
@@ -133,10 +148,12 @@ void sortDigits()
   if(_displayScan[3] & (1<<7)) digitA |= (1<<2);
 }
 
+//scan matrix "vertically"
+//voltage leves below 0,76V are considered significant
 void scanInputs()
 {
     byte segments = 0;
-    if(analogRead(A0) < 155) segments |= (1 << 0);
+    if(analogRead(A0) < 155) segments |= (1 << 0);      
     if(analogRead(A1) < 155) segments |= (1 << 1);
     if(analogRead(A2) < 155) segments |= (1 << 2);
     if(analogRead(A3) < 155) segments |= (1 << 3);
@@ -153,7 +170,7 @@ ISR(TIMER1_OVF_vect)
 {
   TCNT1 = timer1_counter;   // preload timer
 
-  delayMicroseconds(100);
+  delayMicroseconds(100);          //wait for rise time of flange
   scanInputs();
   
   if(_comState > 3)
@@ -166,7 +183,6 @@ ISR(TIMER1_OVF_vect)
 
 ISR(ANALOG_COMP_vect)
 {
-    
     // Discard the first 5 triggers, as on power up the display has some odd behaviour.
     if(_triggeredCounter++ < 5) return;
     _triggeredCounter = 0;
@@ -182,7 +198,8 @@ ISR(ANALOG_COMP_vect)
     scanInputs();
 
     // Disable the analog comparator until this result has been processed
-    ACSR &= ~(1<<ACIE);
+    ACSR &= ~(1<<ACIE);               
+    // previous line unclear as interrupt automatically disabled at start and re-enabled at end of ISR
 }
 
 void initiateRead()
