@@ -1,16 +1,20 @@
-scanning and decoding LCD matrix of cheap CN IR thermometer.  
-Device has proprietary analog sensor and MPU covered under epoxy. No I2C, no serial out, no nothing.  
+# Scanning and decoding LCD matrix of dirt cheap CN IR thermometer.  
+Device has proprietary analog sensor and MPU covered under epoxy. 
+No I2C, no serial out, no nothing. Usual Arduino approach with MLX sensor is no option. 
 
-identifiy COM lines:
+### identifiy COMmon lines
+4 lines, see images from startup phase
 
-identify segments with similar pulses over SEQ and COM matrix 
+### identify SEGments  
+apply synced pulses over SEQ and COM matrix with signal generator  
 
+### results
 LCD matrix f = 453Hz, T = 2,2ms  
 4 COMmon lines, 11 SEGment lines  
 Symbol segments are omittedt to get along with 8 ADC inputs  
 Comparator used for triggering on every cycle (COM1 flange falling)  
 
-segment numbering scheme:
+### segment numbering scheme:
 ```
     5         
   -----      -----      -----        
@@ -23,8 +27,7 @@ segment numbering scheme:
     2
     A          B          C       D
 ```
-
-common/segment matrix:
+### common/segment matrix:
 
 |SEG #|COM1|COM2|COM3|COM4|bit #|
 |---|---|---|---|---|---|
@@ -40,7 +43,7 @@ common/segment matrix:
 |10|A5|A4|A7|A3|6|
 |11|HOLD|A6|A1|A2|7|
 
-bitmasks for each figure (read inverted)
+### bitmasks for each figure (read inverted)
 ```
  _
 | |
