@@ -1,5 +1,8 @@
-scanning and decoding LCD matrix of cheap CN IR thermometer. has proprietary analog sensor and MPU covered under epoxy. No I2C, no serial out, no nothing.
+scanning and decoding LCD matrix of cheap CN IR thermometer.  
+Device has proprietary analog sensor and MPU covered under epoxy. No I2C, no serial out, no nothing.  
+
 identifiy COM lines:
+
 identify segments with similar pulses over SEQ and COM matrix 
 
 LCD matrix f = 453Hz, T = 2,2ms  
