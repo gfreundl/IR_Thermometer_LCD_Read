@@ -34,7 +34,7 @@ normal ops.png:
 |CH1|COM1|
 |CH2|timer1 overflow interrupt|
 |CH3|comparator interrupt|
-|CH4|SEG line A0 (1101) when "22.0" displayed|
+|CH4|SEG line A0 (0000) when "21.4" displayed|
 |MATH| resulting signal common line 1 - segment line 0| 
     
 ### segment numbering scheme:
