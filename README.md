@@ -14,7 +14,7 @@ LCD matrix f = 450Hz, T = 2,1ms
 3 Symbol segment lines are omitted to get along with 8 ADC inputs
 
 ### operation
-AIN0 and AIN1 comparator is used for triggering on every display refresh cycle (COM1 flange falling). Threshold voltage is 2.6 V for operating device on 3 V supply.  
+AIN0 and AIN1 comparator is used for triggering on every display refresh cycle (COM1 flange falling). Voltage divider on AIN1 1k5/10k sets threshold voltage to 2.6 V for operating device on 3 V supply.  
 Comparator interrupt triggers scanning of all 8 digits on line common #1.  
 Thereafter timer0 is started with around 2.1 ms interval.  
 On these interrupts the respective 8 digits on common lines #2 to #4 are scanned.  
