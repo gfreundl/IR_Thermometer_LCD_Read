@@ -24,7 +24,7 @@ Due to such LCDs operating with multiple voltage levels, analog inputs A0 ... A7
 ### sample screenshots
 some power up and startup sequences  
 
-normal ops.png:  
+line Ax showing xxxx.png:  
 
 |channel|signal|
 |-----|-----|
