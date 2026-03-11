@@ -24,7 +24,7 @@ Due to such LCDs operating with multiple voltage levels, analog inputs A0 ... A7
 ### sample screenshots
 some power up and startup sequences  
 
-line Ax showing xxxx.png:  
+line A0 showing 1101.png:  
 
 |channel|signal|
 |-----|-----|
@@ -32,6 +32,10 @@ line Ax showing xxxx.png:
 |CH2|timer1 overflow interrupt|
 |CH3|comparator interrupt|
 |CH4|SEG line A0 (1101) when "22.0" displayed|
+|MATH| resulting signal common line 1 - segment line 0| 
+
+line A6 showing 0000.png:
+same as above but line A6 (0000), display showing "21.4"
     
 ### segment numbering scheme:
 ```
