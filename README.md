@@ -1,6 +1,7 @@
 # Scanning and decoding LCD matrix of dirt cheap CN IR thermometer.  
 Device has proprietary analog sensor and MPU covered under epoxy. 
-No I2C, no serial out, no nothing. Usual Arduino approach with MLX sensor is not an option. 
+No I2C, no serial out, no nothing. Usual Arduino approach with MLX sensor is not an option.  
+
 Changes from original project are in the source code.
 
 ### identifiy COMmon lines
