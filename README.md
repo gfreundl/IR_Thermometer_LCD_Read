@@ -20,6 +20,7 @@ Thereafter timer0 is started with around 2.1 ms interval.
 On these interrupts the respective 8 digits on common lines #2 to #4 are scanned.  
 After three timer overflows the scannning is complete and program waits for next run.
 Due to such LCDs operating with multiple voltage levels, analog inputs A0 ... A7 are required. A level of > 1.1 V is considered an active segment digit.
+For debug and test purpose, comparator and timer0 interrupts are written out on D3 and D4 outputs.
 
 ### sample screenshots
 some power up and startup sequences  
