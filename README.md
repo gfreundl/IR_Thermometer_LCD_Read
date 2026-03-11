@@ -1,6 +1,8 @@
 # Scanning and decoding LCD matrix of dirt cheap CN IR thermometer.  
 Device has proprietary analog sensor and MPU covered under epoxy. 
-No I2C, no serial out, no nothing. Usual Arduino approach with MLX sensor is no option. 
+No I2C, no serial out, no nothing. Usual Arduino approach with MLX sensor is not an option.  
+
+Changes from original project are in the source code.
 
 ### identifiy COMmon lines
 4 lines, see images from startup phase
@@ -9,11 +11,32 @@ No I2C, no serial out, no nothing. Usual Arduino approach with MLX sensor is no 
 apply synced pulses over SEQ and COM matrix with signal generator  
 
 ### results
-LCD matrix f = 453Hz, T = 2,2ms  
+LCD matrix f = 450Hz, T = 2,1ms  
 4 COMmon lines, 11 SEGment lines  
-Symbol segments are omittedt to get along with 8 ADC inputs  
-Comparator used for triggering on every cycle (COM1 flange falling)  
+3 Symbol segment lines are omitted to get along with 8 ADC inputs
 
+### operation
+AIN0 and AIN1 comparator is used for triggering on every display refresh cycle (COM1 flange falling). Voltage divider on AIN1 1k5/10k sets threshold voltage to 2.6 V for operating device on 3 V supply.  
+Comparator interrupt triggers scanning of all 8 digits on line common #1.  
+Thereafter timer0 is started with around 2.1 ms interval.  
+On these interrupts the respective 8 digits on common lines #2 to #4 are scanned.  
+After three timer overflows the scannning is complete and program waits for next run.
+Due to such LCDs operating with multiple voltage levels, analog inputs A0 ... A7 are required. A level of > 1.1 V is considered an active segment digit.
+For debug and test purpose, comparator and timer0 interrupts are written out on D3 and D4 outputs.
+
+### sample screenshots
+some power up and startup sequences  
+
+normal ops.png:  
+
+|channel|signal|
+|-----|-----|
+|CH1|COM1|
+|CH2|timer1 overflow interrupt|
+|CH3|comparator interrupt|
+|CH4|SEG line A0 (0000) when "21.4" displayed|
+|MATH| resulting signal common line 1 - segment line 0| 
+    
 ### segment numbering scheme:
 ```
     5         

@@ -1,15 +1,18 @@
 
-// reads LCD matrix line for Cchina IR Thermometer
+// reads LCD matrix line for China IR Thermometer
 // LCD has 4 COMmon and 11 SEGment lines, so we collect data in 4 passes
-// frequency 450Hz, voltage levels 0V, 1V, 2V, 3V 
+// frequency 453Hz, voltage levels 0V, 1V, 2V, 3V 
 // only digits are read, additional symbols ignored
 
 // functional description:
-// comparator on COM line detects first COM pulse and starts scanning run
-// LCD frequency = 453Hz (2.2ms) 
+// comparator on COM 1 line detects first COM pulse and starts scanning run
 // only relevant SEG lines are connected to A/D converter, decimal point and symbols are omitted
 // matrix pulses are converted to digits binary representation
 // digits converted to numbers
+// changes to original sketch:
+//    timing 489 Hz to 455 Hz
+//    threshold <0,75 V to >1.1 V 
+//    test pins D3 and D4 for debugging IRQ pulses on scope
 
 // defines for setting and clearing register bits
 // sbi() and cbi() originally are Arduibno inline assembler
@@ -25,7 +28,7 @@ volatile byte _comState;                      //counter for current COM line (1.
 volatile byte _displayScan[4];                //contains scanned pulse results for each pass
 volatile byte _scanComplete = 0;
 volatile byte _triggeredCounter = 0;
-
+int LCD_threshold = 230;                      // (LCD_threshold/1023)*5 = 1,1 V
 byte digitA, digitB, digitC, digitD;          //intermediate result bytes
 
 void setup() {
@@ -39,9 +42,12 @@ void setup() {
   pinMode(7,INPUT);
   pinMode(6, INPUT);
   Serial.println("IR Thermometer");
-  // button control pin
+  Serial.println("130226");
+  
+  //test pins, scan interval needs to be max. 500ms to detect these on scope!
   digitalWrite(3, LOW);
-
+  digitalWrite(4, LOW);
+  
   // comparator interrupt enabled and tripped on falling edge, 
   // which is the rising edge of the input signal.
   ACSR = B00011010; 
@@ -49,7 +55,8 @@ void setup() {
   // Timer setup
   TCCR1A = 0;
   TCCR1B = 0;
-  timer1_counter = 61453;   // 489Hz @16MHz => 200us ahead of expected next start
+  //timer1_counter = 61453;   // original 489Hz @16MHz => 200us ahead of expected next start
+  timer1_counter = 61140;     // so changed to 455Hz
   TCCR1B |= (1 << CS11);    // 8 prescaler 
   
   interrupts(); 
@@ -110,7 +117,7 @@ int generateOutput()
   return output;
 }
 
-// see COM/SEG matrix with B0...B7 lines for reference
+// see COM/SEG matrix with A0...A7 lines for reference
 void sortDigits()
 {
   digitA = digitB = digitC = digitD = 0;
@@ -149,18 +156,18 @@ void sortDigits()
 }
 
 //scan matrix "vertically"
-//voltage leves below 0,76V are considered significant
+//voltage levels above LCD_threshold are considered significant
 void scanInputs()
 {
     byte segments = 0;
-    if(analogRead(A0) < 155) segments |= (1 << 0);      
-    if(analogRead(A1) < 155) segments |= (1 << 1);
-    if(analogRead(A2) < 155) segments |= (1 << 2);
-    if(analogRead(A3) < 155) segments |= (1 << 3);
-    if(analogRead(A4) < 155) segments |= (1 << 4);
-    if(analogRead(A5) < 155) segments |= (1 << 5);
-    if(analogRead(A6) < 155) segments |= (1 << 6);
-    if(analogRead(A7) < 155) segments |= (1 << 7);
+    if(analogRead(A0) > LCD_threshold) segments |= (1 << 0);      
+    if(analogRead(A1) > LCD_threshold) segments |= (1 << 1);
+    if(analogRead(A2) > LCD_threshold) segments |= (1 << 2);
+    if(analogRead(A3) > LCD_threshold) segments |= (1 << 3);
+    if(analogRead(A4) > LCD_threshold) segments |= (1 << 4);
+    if(analogRead(A5) > LCD_threshold) segments |= (1 << 5);
+    if(analogRead(A6) > LCD_threshold) segments |= (1 << 6);
+    if(analogRead(A7) > LCD_threshold) segments |= (1 << 7);
 
     _displayScan[_comState] = segments;
     _comState++;
@@ -169,8 +176,9 @@ void scanInputs()
 ISR(TIMER1_OVF_vect)
 {
   TCNT1 = timer1_counter;   // preload timer
-
+  //digitalWrite(4,HIGH);
   delayMicroseconds(100);          //wait for rise time of flange
+  //digitalWrite(4,LOW);  
   scanInputs();
   
   if(_comState > 3)
@@ -183,10 +191,11 @@ ISR(TIMER1_OVF_vect)
 
 ISR(ANALOG_COMP_vect)
 {
-    // Discard the first 5 triggers, as on power up the display has some odd behaviour.
-    if(_triggeredCounter++ < 5) return;
+  // Discard the first 5 triggers, as on power up the display has some odd behaviour.
+  if(_triggeredCounter++ < 3) return;
     _triggeredCounter = 0;
-    
+    //digitalWrite(3,HIGH);    
+
     // Setup timer for the next set
     TCNT1 = timer1_counter;
     TIFR1 |= (1 << TOV1); // Clear any pending interrupt
@@ -194,6 +203,7 @@ ISR(ANALOG_COMP_vect)
     _comState = 0;
 
     delayMicroseconds(100);
+    //digitalWrite(3,LOW);    
     
     scanInputs();
 
@@ -204,9 +214,8 @@ ISR(ANALOG_COMP_vect)
 
 void initiateRead()
 {
-  pinMode(3, OUTPUT);
-  delay(2000);
-  pinMode(3, INPUT);
+  delay(1000);
+  //pinMode(3, INPUT);
   //Clear any pending comparator interrupt
   ACSR |= (1<<ACI);
   // Enable the interrupt
@@ -215,7 +224,7 @@ void initiateRead()
 
 void loop() {
   
-  if(Serial.available() && Serial.read() == 's')
+  if(1)//Serial.available() ) //&& Serial.read() == 's')
   { 
       Serial.println("."); 
       initiateRead();
@@ -224,21 +233,37 @@ void loop() {
           _scanComplete = 0;
       
           sortDigits();
+          
           int output = generateOutput();
           if(output != 8888) // 8888 is the initial state when then the device boots
           {
+            /*Serial.print(digitA, HEX);
+            Serial.print(" ");
+            Serial.print(digitB, HEX);
+            Serial.print(" ");
+            Serial.print(digitC), HEX;
+            Serial.print(" ");
+            Serial.println(digitD, HEX);
+            Serial.println(" ");
+
+            Serial.print(_displayScan[0], BIN);
+            Serial.print(" ");
+            Serial.print(_displayScan[1], BIN);
+            Serial.print(" ");
+            Serial.print(_displayScan[2], BIN);
+            Serial.print(" ");
+            Serial.println(_displayScan[3], BIN);          
+            */ 
             Serial.print(output/10);
             Serial.print('.');
             Serial.println(output%10);
             break;
           }
+          
       }
     }
-
   }
-  
-
-  
+  digitalWrite(3,LOW);
 }
 
 
