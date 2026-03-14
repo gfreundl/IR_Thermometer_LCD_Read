@@ -42,12 +42,34 @@ void setup() {
   pinMode(7,INPUT);
   pinMode(6, INPUT);
   Serial.println("IR Thermometer");
-  Serial.println("130226");
+  Serial.println("140326");
   
-  //test pins, scan interval needs to be max. 500ms to detect these on scope!
+  //emulate required scan button sequence for continous operation
+  //CAUTION: make sure to NEVER set this pin HIGH, 5V could fry the device !!!
+  //start with open drain
+  pinMode(2, INPUT);
+  digitalWrite(2, LOW);
+  //waiting 5 sec for thermometer to come up
+  delay(5000);
+  //switching thermometer scan on
+  pinMode(2, OUTPUT);
+  digitalWrite(2, LOW);
+  delay(1000);
+  //switching scan off
+  pinMode(2, INPUT);
+  digitalWrite(2, LOW);
+  delay(1000);
+  //switching thermometer scan finallly on 
+  pinMode(2, OUTPUT);
+  digitalWrite(2, LOW);
+  delay(500);
+
+  //test pins for interrupts, decrease scan interval to detect these on scope!
+  pinMode(3, OUTPUT);
+  pinMode(4, OUTPUT);
   digitalWrite(3, LOW);
   digitalWrite(4, LOW);
-  
+
   // comparator interrupt enabled and tripped on falling edge, 
   // which is the rising edge of the input signal.
   ACSR = B00011010; 
@@ -176,9 +198,9 @@ void scanInputs()
 ISR(TIMER1_OVF_vect)
 {
   TCNT1 = timer1_counter;   // preload timer
-  //digitalWrite(4,HIGH);
+  digitalWrite(4,HIGH);
   delayMicroseconds(100);          //wait for rise time of flange
-  //digitalWrite(4,LOW);  
+  digitalWrite(4,LOW);  
   scanInputs();
   
   if(_comState > 3)
@@ -194,7 +216,7 @@ ISR(ANALOG_COMP_vect)
   // Discard the first 5 triggers, as on power up the display has some odd behaviour.
   if(_triggeredCounter++ < 3) return;
     _triggeredCounter = 0;
-    //digitalWrite(3,HIGH);    
+    digitalWrite(3,HIGH);    
 
     // Setup timer for the next set
     TCNT1 = timer1_counter;
@@ -203,7 +225,7 @@ ISR(ANALOG_COMP_vect)
     _comState = 0;
 
     delayMicroseconds(100);
-    //digitalWrite(3,LOW);    
+    digitalWrite(3,LOW);    
     
     scanInputs();
 
@@ -214,8 +236,9 @@ ISR(ANALOG_COMP_vect)
 
 void initiateRead()
 {
-  delay(1000);
-  //pinMode(3, INPUT);
+  delay(500);
+  delay(500);
+  
   //Clear any pending comparator interrupt
   ACSR |= (1<<ACI);
   // Enable the interrupt
@@ -226,18 +249,19 @@ void loop() {
   
   if(1)//Serial.available() ) //&& Serial.read() == 's')
   { 
-      Serial.println("."); 
-      initiateRead();
-      while(1){
-        if(_scanComplete){
-          _scanComplete = 0;
-      
-          sortDigits();
-          
-          int output = generateOutput();
-          if(output != 8888) // 8888 is the initial state when then the device boots
-          {
-            /*Serial.print(digitA, HEX);
+    initiateRead();
+    while(1){
+      if(_scanComplete){
+        _scanComplete = 0;
+    
+        sortDigits();
+        
+        int output = generateOutput();
+        //this original clause stops any automatic operation after one error -200.-1 has been displayed
+        //if (output != 8888) // 8888 is the initial state when then the device boots
+        if(1)
+        {
+          /*Serial.print(digitA, HEX);
             Serial.print(" ");
             Serial.print(digitB, HEX);
             Serial.print(" ");
@@ -254,13 +278,12 @@ void loop() {
             Serial.print(" ");
             Serial.println(_displayScan[3], BIN);          
             */ 
-            Serial.print(output/10);
-            Serial.print('.');
-            Serial.println(output%10);
-            break;
-          }
-          
-      }
+          Serial.print(output/10);
+          Serial.print('.');
+          Serial.println(output%10);
+          break;
+        }          
+      } 
     }
   }
   digitalWrite(3,LOW);
