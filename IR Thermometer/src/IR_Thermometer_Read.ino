@@ -28,7 +28,11 @@ volatile byte _comState;                      //counter for current COM line (1.
 volatile byte _displayScan[4];                //contains scanned pulse results for each pass
 volatile byte _scanComplete = 0;
 volatile byte _triggeredCounter = 0;
-int LCD_threshold = 230;                      // (LCD_threshold/1023)*5 = 1,1 V
+#ifdef nanoatmega328
+int LCD_threshold = 230;                      // (LCD_threshold/1023)*5V = 1,1 V
+#else
+int LCD_threshold = 349;                      // (LCD_threshold/1023)*3.3V = 1,1 V
+#endif
 byte digitA, digitB, digitC, digitD;          //intermediate result bytes
 
 void setup() {
@@ -42,10 +46,13 @@ void setup() {
   pinMode(7,INPUT);
   pinMode(6, INPUT);
   Serial.println("IR Thermometer");
-  Serial.println("140326");
+  Serial.println("170326");
+  Serial.println("build for atmega328p 3.3V 8MHz");
   
   //emulate required scan button sequence for continous operation
-  //CAUTION: make sure to NEVER set this pin HIGH, 5V could fry the device !!!
+  //CAUTION: 
+  //NEVER set this pin HIGH when operating on 5V (Nano)
+  //5V could fry the device !!!
   //start with open drain
   pinMode(2, INPUT);
   digitalWrite(2, LOW);
@@ -78,7 +85,11 @@ void setup() {
   TCCR1A = 0;
   TCCR1B = 0;
   //timer1_counter = 61453;   // original 489Hz @16MHz => 200us ahead of expected next start
-  timer1_counter = 61140;     // so changed to 455Hz
+  #ifdef nanoatmega328
+  timer1_counter = 61140;     // so changed to 455Hz (2198us @16MHz)
+  #else
+  timer1_counter = 63337;     // 2198us @8MHz CPU
+  #endif
   TCCR1B |= (1 << CS11);    // 8 prescaler 
   
   interrupts(); 
